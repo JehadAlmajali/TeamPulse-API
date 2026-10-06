@@ -1,0 +1,6 @@
+@TeamPulse.Api_HostAddress = http://localhost:5111
+
+GET {{TeamPulse.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
