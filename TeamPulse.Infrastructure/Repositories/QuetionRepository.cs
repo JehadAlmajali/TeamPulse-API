@@ -21,4 +21,13 @@ public class QuestionRepository : IQuestionRepository
             .OrderBy(q => q.DisplayOrder)
             .ToListAsync();
     }
+
+    public async Task<List<Question>> GetActiveOrderedAsync()
+    {
+        return await _context.Questions
+            .AsNoTracking()
+            .Where(q => q.IsActive)
+            .OrderBy(q => q.DisplayOrder)
+            .ToListAsync();
+    }
 }
