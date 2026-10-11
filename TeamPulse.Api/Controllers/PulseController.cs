@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using TeamPulse.Application.Services;
 using TeamPulse.Application.DTOs;
+using TeamPulse.Api.Responses;
 
 namespace TeamPulse.Api.Controllers;
 
@@ -69,16 +70,32 @@ public class PulseController : ControllerBase
                 Ok(),
 
             SubmitPulseAnswerResult.AlreadyAnswered =>
-                Conflict("Today's response has already been submitted."),
+                Conflict(new ApiErrorResponse
+                {
+                    Status = 409,
+                    Message = "Today's response has already been submitted."
+                }),
 
             SubmitPulseAnswerResult.InvalidQuestion =>
-                BadRequest("The submitted question is not the expected question."),
+                BadRequest(new ApiErrorResponse
+                {
+                    Status = 400,
+                    Message = "The submitted question is not the expected question."
+                }),
 
             SubmitPulseAnswerResult.InvalidRating =>
-                BadRequest("Rating must be between 1 and 5."),
+                BadRequest(new ApiErrorResponse
+                {
+                    Status = 400,
+                    Message = "Rating must be between 1 and 5."
+                }),
 
             _ =>
-                StatusCode(500)
+                StatusCode(500, new ApiErrorResponse
+                {
+                    Status = 500,
+                    Message = "An unexpected server error occurred."
+                })
         };
     }
 }

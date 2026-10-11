@@ -6,6 +6,7 @@ using TeamPulse.Infrastructure.Repositories;
 using TeamPulse.Application.Services;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using TeamPulse.Api.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -61,6 +62,8 @@ builder.Services.AddScoped<QuestionService>();
 builder.Services.AddScoped<PulseService>();
 
 var app = builder.Build();
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
