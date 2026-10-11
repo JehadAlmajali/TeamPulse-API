@@ -40,8 +40,8 @@ public class DevTokenController : ControllerBase
 
         var claims = new[]
         {
-            new Claim("userId", "1"),
-            new Claim("name", "Test Employee"),
+            new Claim("userId", "2"),
+            new Claim("name", "Test Employee 2"),
             new Claim("role", "Employee")
         };
 

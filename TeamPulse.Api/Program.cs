@@ -55,8 +55,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
-builder.Services.AddScoped<QuestionService>();
 builder.Services.AddScoped<IPulseResponseRepository, PulseResponseRepository>();
+
+builder.Services.AddScoped<QuestionService>();
+builder.Services.AddScoped<PulseService>();
 
 var app = builder.Build();
 

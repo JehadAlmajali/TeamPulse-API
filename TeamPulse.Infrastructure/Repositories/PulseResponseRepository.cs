@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TeamPulse.Application.Interfaces;
+using TeamPulse.Domain.Entities;
 using TeamPulse.Infrastructure.Persistence;
 
 namespace TeamPulse.Infrastructure.Repositories;
@@ -27,5 +28,11 @@ public class PulseResponseRepository : IPulseResponseRepository
         return await _context.PulseResponses
             .AsNoTracking()
             .CountAsync(r => r.UserId == userId);
+    }
+
+    public async Task AddAsync(PulseResponse response)
+    {
+        await _context.PulseResponses.AddAsync(response);
+        await _context.SaveChangesAsync();
     }
 }
