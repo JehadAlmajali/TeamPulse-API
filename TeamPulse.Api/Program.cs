@@ -7,6 +7,7 @@ using TeamPulse.Application.Services;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using TeamPulse.Api.Middleware;
+using TeamPulse.Api.Responses;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,6 +65,34 @@ builder.Services.AddScoped<PulseService>();
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+app.UseStatusCodePages(async statusCodeContext =>
+{
+    var response = statusCodeContext.HttpContext.Response;
+
+    ApiErrorResponse? errorResponse = response.StatusCode switch
+    {
+        401 => new ApiErrorResponse
+        {
+            Status = 401,
+            Message = "Authentication required."
+        },
+
+        404 => new ApiErrorResponse
+        {
+            Status = 404,
+            Message = "Requested resource not found."
+        },
+
+        _ => null
+    };
+
+    if (errorResponse is not null)
+    {
+        response.ContentType = "application/json";
+        await response.WriteAsJsonAsync(errorResponse);
+    }
+});
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
