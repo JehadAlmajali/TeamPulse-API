@@ -5,6 +5,11 @@ using System.Text.Json;
 using TeamPulse.Application.DTOs;
 using TeamPulse.Domain.Entities;
 using TeamPulse.Infrastructure.Persistence;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace TeamPulse.Tests.Integration;
 
@@ -144,5 +149,54 @@ public class ReportsApiTests : IClassFixture<TeamPulseWebApplicationFactory>
         Assert.NotNull(report);
         Assert.Equal(2, report.TotalResponses);
         Assert.Equal(3, report.AverageRating);
+    }
+
+    [Fact]
+    public async Task GetSummary_WithEmployeeToken_ReturnsForbidden()
+    {
+        var configuration =
+            _factory.Services.GetRequiredService<IConfiguration>();
+
+        var issuer = configuration["Jwt:Issuer"]!;
+        var audience = configuration["Jwt:Audience"]!;
+        var key = configuration["Jwt:Key"]!;
+
+        var claims = new[]
+        {
+        new Claim("userId", "10"),
+        new Claim("name", "Test Employee"),
+        new Claim("role", "Employee")
+    };
+
+        var securityKey =
+            new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(key));
+
+        var credentials =
+            new SigningCredentials(
+                securityKey,
+                SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: issuer,
+            audience: audience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(30),
+            signingCredentials: credentials);
+
+        var tokenString =
+            new JwtSecurityTokenHandler().WriteToken(token);
+
+        _client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue(
+                "Bearer",
+                tokenString);
+
+        var response =
+            await _client.GetAsync("/api/reports/summary");
+
+        Assert.Equal(
+            HttpStatusCode.Forbidden,
+            response.StatusCode);
     }
 }
