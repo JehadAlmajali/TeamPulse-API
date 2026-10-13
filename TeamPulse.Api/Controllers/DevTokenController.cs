@@ -40,9 +40,9 @@ public class DevTokenController : ControllerBase
 
         var claims = new[]
         {
-            new Claim("userId", "1"),
-            new Claim("name", "Test Employee"),
-            new Claim("role", "Employee")
+            new Claim("userId", "3"),
+            new Claim("name", "Test Admin"),
+            new Claim("role", "Admin")
         };
 
         var securityKey =

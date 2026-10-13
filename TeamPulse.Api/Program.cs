@@ -29,6 +29,7 @@ builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -58,9 +59,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
 builder.Services.AddScoped<IPulseResponseRepository, PulseResponseRepository>();
+builder.Services.AddScoped<IReportingRepository, ReportingRepository>();
 
 builder.Services.AddScoped<QuestionService>();
 builder.Services.AddScoped<PulseService>();
+builder.Services.AddScoped<ReportingService>();
 
 var app = builder.Build();
 
