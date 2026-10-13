@@ -3,4 +3,5 @@
   <Project Path="TeamPulse.Application/TeamPulse.Application.csproj" />
   <Project Path="TeamPulse.Domain/TeamPulse.Domain.csproj" />
   <Project Path="TeamPulse.Infrastructure/TeamPulse.Infrastructure.csproj" />
+  <Project Path="TeamPulse.Tests/TeamPulse.Tests.csproj" Id="65fa90c7-026a-4fdf-bf43-35f66420ee06" />
 </Solution>
