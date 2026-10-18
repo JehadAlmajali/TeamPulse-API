@@ -1,6 +1,5 @@
-﻿using System.Net;
-using System.Text.Json;
-using TeamPulse.Api.Responses;
+﻿using TeamPulse.Api.Responses;
+using TeamPulse.Application.Exceptions;
 
 namespace TeamPulse.Api.Middleware;
 
@@ -22,24 +21,110 @@ public class ExceptionHandlingMiddleware
         try
         {
             await _next(context);
+
+            if (!context.Response.HasStarted)
+            {
+                if (context.Response.StatusCode == 401)
+                {
+                    await WriteErrorAsync(
+                        context,
+                        401,
+                        "Authentication required.");
+                }
+                else if (context.Response.StatusCode == 403)
+                {
+                    await WriteErrorAsync(
+                        context,
+                        403,
+                        "Access forbidden.");
+                }
+                else if (context.Response.StatusCode == 404)
+                {
+                    await WriteErrorAsync(
+                        context,
+                        404,
+                        "Requested resource not found.");
+                }
+            }
+        }
+        catch (AppException ex)
+        {
+            var error = ex.Code switch
+            {
+                "ALREADY_ANSWERED" =>
+                    new ApiErrorResponse
+                    {
+                        Status = 409,
+                        Message = "Today's response has already been submitted."
+                    },
+
+                "INVALID_QUESTION" =>
+                    new ApiErrorResponse
+                    {
+                        Status = 400,
+                        Message = "The submitted question is not the expected question."
+                    },
+
+                "INVALID_RATING" =>
+                    new ApiErrorResponse
+                    {
+                        Status = 400,
+                        Message = "Rating must be between 1 and 5."
+                    },
+
+                "NO_ACTIVE_QUESTIONS" =>
+                    new ApiErrorResponse
+                    {
+                        Status = 400,
+                        Message = "No active questions are available."
+                    },
+
+                _ =>
+                    new ApiErrorResponse
+                    {
+                        Status = 500,
+                        Message = "An unexpected server error occurred."
+                    }
+            };
+
+            await WriteErrorAsync(
+                context,
+                error.Status,
+                error.Message);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An unexpected error occurred.");
+            _logger.LogError(
+                ex,
+                "An unexpected error occurred.");
 
-            context.Response.StatusCode =
-                (int)HttpStatusCode.InternalServerError;
-
-            context.Response.ContentType = "application/json";
-
-            var response = new ApiErrorResponse
-            {
-                Status = 500,
-                Message = "An unexpected server error occurred."
-            };
-
-            await context.Response.WriteAsync(
-                JsonSerializer.Serialize(response));
+            await WriteErrorAsync(
+                context,
+                500,
+                "An unexpected server error occurred.");
         }
+    }
+
+    private static async Task WriteErrorAsync(
+        HttpContext context,
+        int status,
+        string message)
+    {
+        if (context.Response.HasStarted)
+        {
+            return;
+        }
+
+        context.Response.Clear();
+
+        context.Response.StatusCode = status;
+        context.Response.ContentType = "application/json";
+
+        await context.Response.WriteAsJsonAsync(
+            new ApiErrorResponse
+            {
+                Status = status,
+                Message = message
+            });
     }
 }

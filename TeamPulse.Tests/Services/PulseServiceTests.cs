@@ -1,5 +1,6 @@
 ﻿using Moq;
 using TeamPulse.Application.DTOs;
+using TeamPulse.Application.Exceptions;
 using TeamPulse.Application.Interfaces;
 using TeamPulse.Application.Services;
 using TeamPulse.Domain.Entities;
@@ -18,10 +19,11 @@ public class PulseServiceTests
             new Mock<IQuestionRepository>();
 
         var userId = 1L;
-        var date = new DateOnly(2026, 10, 11);
+        var today =
+            DateOnly.FromDateTime(DateTime.UtcNow);
 
         pulseResponseRepository
-            .Setup(r => r.HasAnsweredOnDateAsync(userId, date))
+            .Setup(r => r.HasAnsweredOnDateAsync(userId, today))
             .ReturnsAsync(false);
 
         pulseResponseRepository
@@ -52,10 +54,10 @@ public class PulseServiceTests
             questionRepository.Object);
 
         var result =
-            await service.GetTodayQuestionAsync(userId, date);
+            await service.GetTodayQuestionAsync(userId);
 
         Assert.NotNull(result);
-        Assert.Equal(1, result.Id);
+        Assert.Equal(1, result.QuestionId);
     }
 
     [Fact]
@@ -68,10 +70,11 @@ public class PulseServiceTests
             new Mock<IQuestionRepository>();
 
         var userId = 1L;
-        var date = new DateOnly(2026, 10, 11);
+        var today =
+            DateOnly.FromDateTime(DateTime.UtcNow);
 
         pulseResponseRepository
-            .Setup(r => r.HasAnsweredOnDateAsync(userId, date))
+            .Setup(r => r.HasAnsweredOnDateAsync(userId, today))
             .ReturnsAsync(true);
 
         var service = new PulseService(
@@ -79,7 +82,7 @@ public class PulseServiceTests
             questionRepository.Object);
 
         var result =
-            await service.GetTodayQuestionAsync(userId, date);
+            await service.GetTodayQuestionAsync(userId);
 
         Assert.Null(result);
     }
@@ -94,10 +97,11 @@ public class PulseServiceTests
             new Mock<IQuestionRepository>();
 
         var userId = 1L;
-        var date = new DateOnly(2026, 10, 11);
+        var today =
+            DateOnly.FromDateTime(DateTime.UtcNow);
 
         pulseResponseRepository
-            .Setup(r => r.HasAnsweredOnDateAsync(userId, date))
+            .Setup(r => r.HasAnsweredOnDateAsync(userId, today))
             .ReturnsAsync(false);
 
         pulseResponseRepository
@@ -108,19 +112,19 @@ public class PulseServiceTests
             .Setup(r => r.GetActiveOrderedAsync())
             .ReturnsAsync(new List<Question>
             {
-            new Question
-            {
-                Id = 1,
-                DisplayOrder = 1,
-                QuestionText = "Question 1"
-            },
+                new Question
+                {
+                    Id = 1,
+                    DisplayOrder = 1,
+                    QuestionText = "Question 1"
+                },
 
-            new Question
-            {
-                Id = 2,
-                DisplayOrder = 2,
-                QuestionText = "Question 2"
-            }
+                new Question
+                {
+                    Id = 2,
+                    DisplayOrder = 2,
+                    QuestionText = "Question 2"
+                }
             });
 
         var service = new PulseService(
@@ -128,10 +132,10 @@ public class PulseServiceTests
             questionRepository.Object);
 
         var result =
-            await service.GetTodayQuestionAsync(userId, date);
+            await service.GetTodayQuestionAsync(userId);
 
         Assert.NotNull(result);
-        Assert.Equal(2, result.Id);
+        Assert.Equal(2, result.QuestionId);
     }
 
     [Fact]
@@ -144,10 +148,11 @@ public class PulseServiceTests
             new Mock<IQuestionRepository>();
 
         var userId = 1L;
-        var date = new DateOnly(2026, 10, 11);
+        var today =
+            DateOnly.FromDateTime(DateTime.UtcNow);
 
         pulseResponseRepository
-            .Setup(r => r.HasAnsweredOnDateAsync(userId, date))
+            .Setup(r => r.HasAnsweredOnDateAsync(userId, today))
             .ReturnsAsync(false);
 
         pulseResponseRepository
@@ -158,19 +163,19 @@ public class PulseServiceTests
             .Setup(r => r.GetActiveOrderedAsync())
             .ReturnsAsync(new List<Question>
             {
-            new Question
-            {
-                Id = 1,
-                DisplayOrder = 1,
-                QuestionText = "Question 1"
-            },
+                new Question
+                {
+                    Id = 1,
+                    DisplayOrder = 1,
+                    QuestionText = "Question 1"
+                },
 
-            new Question
-            {
-                Id = 2,
-                DisplayOrder = 2,
-                QuestionText = "Question 2"
-            }
+                new Question
+                {
+                    Id = 2,
+                    DisplayOrder = 2,
+                    QuestionText = "Question 2"
+                }
             });
 
         var service = new PulseService(
@@ -178,14 +183,14 @@ public class PulseServiceTests
             questionRepository.Object);
 
         var result =
-            await service.GetTodayQuestionAsync(userId, date);
+            await service.GetTodayQuestionAsync(userId);
 
         Assert.NotNull(result);
-        Assert.Equal(1, result.Id);
+        Assert.Equal(1, result.QuestionId);
     }
 
     [Fact]
-    public async Task SubmitAnswerAsync_ValidAnswer_ReturnsSuccess()
+    public async Task SubmitAnswerAsync_ValidAnswer_SavesResponse()
     {
         var pulseResponseRepository =
             new Mock<IPulseResponseRepository>();
@@ -194,7 +199,8 @@ public class PulseServiceTests
             new Mock<IQuestionRepository>();
 
         var userId = 1L;
-        var date = new DateOnly(2026, 10, 11);
+        var today =
+            DateOnly.FromDateTime(DateTime.UtcNow);
 
         var request = new SubmitPulseAnswerRequest
         {
@@ -203,7 +209,7 @@ public class PulseServiceTests
         };
 
         pulseResponseRepository
-            .Setup(r => r.HasAnsweredOnDateAsync(userId, date))
+            .Setup(r => r.HasAnsweredOnDateAsync(userId, today))
             .ReturnsAsync(false);
 
         pulseResponseRepository
@@ -214,31 +220,28 @@ public class PulseServiceTests
             .Setup(r => r.GetActiveOrderedAsync())
             .ReturnsAsync(new List<Question>
             {
-            new Question
-            {
-                Id = 1,
-                DisplayOrder = 1,
-                QuestionText = "Question 1"
-            },
+                new Question
+                {
+                    Id = 1,
+                    DisplayOrder = 1,
+                    QuestionText = "Question 1"
+                },
 
-            new Question
-            {
-                Id = 2,
-                DisplayOrder = 2,
-                QuestionText = "Question 2"
-            }
+                new Question
+                {
+                    Id = 2,
+                    DisplayOrder = 2,
+                    QuestionText = "Question 2"
+                }
             });
 
         var service = new PulseService(
             pulseResponseRepository.Object,
             questionRepository.Object);
 
-        var result =
-            await service.SubmitAnswerAsync(userId, date, request);
-
-        Assert.Equal(
-            SubmitPulseAnswerResult.Success,
-            result);
+        await service.SubmitAnswerAsync(
+            userId,
+            request);
 
         pulseResponseRepository.Verify(
             r => r.AddAsync(It.Is<PulseResponse>(
@@ -246,12 +249,12 @@ public class PulseServiceTests
                     response.UserId == userId &&
                     response.QuestionId == 1 &&
                     response.Rating == 4 &&
-                    response.AnsweredDate == date)),
+                    response.AnsweredDate == today)),
             Times.Once);
     }
 
     [Fact]
-    public async Task SubmitAnswerAsync_AlreadyAnswered_ReturnsAlreadyAnswered()
+    public async Task SubmitAnswerAsync_AlreadyAnswered_ThrowsAppException()
     {
         var pulseResponseRepository =
             new Mock<IPulseResponseRepository>();
@@ -260,7 +263,8 @@ public class PulseServiceTests
             new Mock<IQuestionRepository>();
 
         var userId = 1L;
-        var date = new DateOnly(2026, 10, 11);
+        var today =
+            DateOnly.FromDateTime(DateTime.UtcNow);
 
         var request = new SubmitPulseAnswerRequest
         {
@@ -269,19 +273,22 @@ public class PulseServiceTests
         };
 
         pulseResponseRepository
-            .Setup(r => r.HasAnsweredOnDateAsync(userId, date))
+            .Setup(r => r.HasAnsweredOnDateAsync(userId, today))
             .ReturnsAsync(true);
 
         var service = new PulseService(
             pulseResponseRepository.Object,
             questionRepository.Object);
 
-        var result =
-            await service.SubmitAnswerAsync(userId, date, request);
+        var exception =
+            await Assert.ThrowsAsync<AppException>(
+                () => service.SubmitAnswerAsync(
+                    userId,
+                    request));
 
         Assert.Equal(
-            SubmitPulseAnswerResult.AlreadyAnswered,
-            result);
+            "ALREADY_ANSWERED",
+            exception.Code);
 
         pulseResponseRepository.Verify(
             r => r.AddAsync(It.IsAny<PulseResponse>()),
@@ -289,7 +296,7 @@ public class PulseServiceTests
     }
 
     [Fact]
-    public async Task SubmitAnswerAsync_InvalidRating_ReturnsInvalidRating()
+    public async Task SubmitAnswerAsync_InvalidRating_ThrowsAppException()
     {
         var pulseResponseRepository =
             new Mock<IPulseResponseRepository>();
@@ -298,7 +305,8 @@ public class PulseServiceTests
             new Mock<IQuestionRepository>();
 
         var userId = 1L;
-        var date = new DateOnly(2026, 10, 11);
+        var today =
+            DateOnly.FromDateTime(DateTime.UtcNow);
 
         var request = new SubmitPulseAnswerRequest
         {
@@ -307,7 +315,7 @@ public class PulseServiceTests
         };
 
         pulseResponseRepository
-            .Setup(r => r.HasAnsweredOnDateAsync(userId, date))
+            .Setup(r => r.HasAnsweredOnDateAsync(userId, today))
             .ReturnsAsync(false);
 
         pulseResponseRepository
@@ -318,24 +326,27 @@ public class PulseServiceTests
             .Setup(r => r.GetActiveOrderedAsync())
             .ReturnsAsync(new List<Question>
             {
-            new Question
-            {
-                Id = 1,
-                DisplayOrder = 1,
-                QuestionText = "Question 1"
-            }
+                new Question
+                {
+                    Id = 1,
+                    DisplayOrder = 1,
+                    QuestionText = "Question 1"
+                }
             });
 
         var service = new PulseService(
             pulseResponseRepository.Object,
             questionRepository.Object);
 
-        var result =
-            await service.SubmitAnswerAsync(userId, date, request);
+        var exception =
+            await Assert.ThrowsAsync<AppException>(
+                () => service.SubmitAnswerAsync(
+                    userId,
+                    request));
 
         Assert.Equal(
-            SubmitPulseAnswerResult.InvalidRating,
-            result);
+            "INVALID_RATING",
+            exception.Code);
 
         pulseResponseRepository.Verify(
             r => r.AddAsync(It.IsAny<PulseResponse>()),
@@ -343,7 +354,7 @@ public class PulseServiceTests
     }
 
     [Fact]
-    public async Task SubmitAnswerAsync_WrongQuestion_ReturnsInvalidQuestion()
+    public async Task SubmitAnswerAsync_WrongQuestion_ThrowsAppException()
     {
         var pulseResponseRepository =
             new Mock<IPulseResponseRepository>();
@@ -352,7 +363,8 @@ public class PulseServiceTests
             new Mock<IQuestionRepository>();
 
         var userId = 1L;
-        var date = new DateOnly(2026, 10, 11);
+        var today =
+            DateOnly.FromDateTime(DateTime.UtcNow);
 
         var request = new SubmitPulseAnswerRequest
         {
@@ -361,7 +373,7 @@ public class PulseServiceTests
         };
 
         pulseResponseRepository
-            .Setup(r => r.HasAnsweredOnDateAsync(userId, date))
+            .Setup(r => r.HasAnsweredOnDateAsync(userId, today))
             .ReturnsAsync(false);
 
         pulseResponseRepository
@@ -372,31 +384,34 @@ public class PulseServiceTests
             .Setup(r => r.GetActiveOrderedAsync())
             .ReturnsAsync(new List<Question>
             {
-            new Question
-            {
-                Id = 1,
-                DisplayOrder = 1,
-                QuestionText = "Question 1"
-            },
+                new Question
+                {
+                    Id = 1,
+                    DisplayOrder = 1,
+                    QuestionText = "Question 1"
+                },
 
-            new Question
-            {
-                Id = 2,
-                DisplayOrder = 2,
-                QuestionText = "Question 2"
-            }
+                new Question
+                {
+                    Id = 2,
+                    DisplayOrder = 2,
+                    QuestionText = "Question 2"
+                }
             });
 
         var service = new PulseService(
             pulseResponseRepository.Object,
             questionRepository.Object);
 
-        var result =
-            await service.SubmitAnswerAsync(userId, date, request);
+        var exception =
+            await Assert.ThrowsAsync<AppException>(
+                () => service.SubmitAnswerAsync(
+                    userId,
+                    request));
 
         Assert.Equal(
-            SubmitPulseAnswerResult.InvalidQuestion,
-            result);
+            "INVALID_QUESTION",
+            exception.Code);
 
         pulseResponseRepository.Verify(
             r => r.AddAsync(It.IsAny<PulseResponse>()),
@@ -404,7 +419,7 @@ public class PulseServiceTests
     }
 
     [Fact]
-    public async Task GetTodayQuestionAsync_NoActiveQuestions_ReturnsNull()
+    public async Task GetTodayQuestionAsync_NoActiveQuestions_ThrowsAppException()
     {
         var pulseResponseRepository =
             new Mock<IPulseResponseRepository>();
@@ -413,10 +428,11 @@ public class PulseServiceTests
             new Mock<IQuestionRepository>();
 
         var userId = 1L;
-        var date = new DateOnly(2026, 10, 11);
+        var today =
+            DateOnly.FromDateTime(DateTime.UtcNow);
 
         pulseResponseRepository
-            .Setup(r => r.HasAnsweredOnDateAsync(userId, date))
+            .Setup(r => r.HasAnsweredOnDateAsync(userId, today))
             .ReturnsAsync(false);
 
         pulseResponseRepository
@@ -431,9 +447,12 @@ public class PulseServiceTests
             pulseResponseRepository.Object,
             questionRepository.Object);
 
-        var result =
-            await service.GetTodayQuestionAsync(userId, date);
+        var exception =
+            await Assert.ThrowsAsync<AppException>(
+                () => service.GetTodayQuestionAsync(userId));
 
-        Assert.Null(result);
+        Assert.Equal(
+            "NO_ACTIVE_QUESTIONS",
+            exception.Code);
     }
 }

@@ -7,7 +7,7 @@ using TeamPulse.Application.Services;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using TeamPulse.Api.Middleware;
-using TeamPulse.Api.Responses;
+using TeamPulse.Api.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,47 +57,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
-builder.Services.AddScoped<IPulseResponseRepository, PulseResponseRepository>();
-builder.Services.AddScoped<IReportingRepository, ReportingRepository>();
-
-builder.Services.AddScoped<QuestionService>();
-builder.Services.AddScoped<PulseService>();
-builder.Services.AddScoped<ReportingService>();
+builder.Services.AddTeamPulseServices();
 
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-app.UseStatusCodePages(async statusCodeContext =>
-{
-    var response = statusCodeContext.HttpContext.Response;
-
-    ApiErrorResponse? errorResponse = response.StatusCode switch
-    {
-        401 => new ApiErrorResponse
-        {
-            Status = 401,
-            Message = "Authentication required."
-        },
-
-        404 => new ApiErrorResponse
-        {
-            Status = 404,
-            Message = "Requested resource not found."
-        },
-
-        _ => null
-    };
-
-    if (errorResponse is not null)
-    {
-        response.ContentType = "application/json";
-        await response.WriteAsJsonAsync(errorResponse);
-    }
-});
-
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

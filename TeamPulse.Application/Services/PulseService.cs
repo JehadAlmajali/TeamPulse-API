@@ -1,6 +1,7 @@
-﻿using TeamPulse.Application.Interfaces;
+﻿using TeamPulse.Application.DTOs;
+using TeamPulse.Application.Exceptions;
+using TeamPulse.Application.Interfaces;
 using TeamPulse.Domain.Entities;
-using TeamPulse.Application.DTOs;
 
 namespace TeamPulse.Application.Services;
 
@@ -17,14 +18,15 @@ public class PulseService
         _questionRepository = questionRepository;
     }
 
-    public async Task<Question?> GetTodayQuestionAsync(
-        long userId,
-        DateOnly date)
+    public async Task<TodayQuestionDto?> GetTodayQuestionAsync(
+        long userId)
     {
+        var today =
+            DateOnly.FromDateTime(DateTime.UtcNow);
+
         var hasAnsweredToday =
-            await _pulseResponseRepository.HasAnsweredOnDateAsync(
-                userId,
-                date);
+            await _pulseResponseRepository
+                .HasAnsweredOnDateAsync(userId, today);
 
         if (hasAnsweredToday)
         {
@@ -32,46 +34,58 @@ public class PulseService
         }
 
         var totalResponses =
-            await _pulseResponseRepository.CountByUserAsync(userId);
+            await _pulseResponseRepository
+                .CountByUserAsync(userId);
 
         var activeQuestions =
-            await _questionRepository.GetActiveOrderedAsync();
+            await _questionRepository
+                .GetActiveOrderedAsync();
 
         if (activeQuestions.Count == 0)
         {
-            return null;
+            throw new AppException("NO_ACTIVE_QUESTIONS");
         }
 
         var nextQuestionIndex =
             totalResponses % activeQuestions.Count;
 
-        return activeQuestions[nextQuestionIndex];
+        var question =
+            activeQuestions[nextQuestionIndex];
+
+        return new TodayQuestionDto
+        {
+            QuestionId = question.Id,
+            Question = question.QuestionText
+        };
     }
 
-    public async Task<SubmitPulseAnswerResult> SubmitAnswerAsync(
-    long userId,
-    DateOnly date,
-    SubmitPulseAnswerRequest request)
+    public async Task SubmitAnswerAsync(
+        long userId,
+        SubmitPulseAnswerRequest request)
     {
+        var today =
+            DateOnly.FromDateTime(DateTime.UtcNow);
+
         var hasAnsweredToday =
-            await _pulseResponseRepository.HasAnsweredOnDateAsync(
-                userId,
-                date);
+            await _pulseResponseRepository
+                .HasAnsweredOnDateAsync(userId, today);
 
         if (hasAnsweredToday)
         {
-            return SubmitPulseAnswerResult.AlreadyAnswered;
+            throw new AppException("ALREADY_ANSWERED");
         }
 
         var totalResponses =
-            await _pulseResponseRepository.CountByUserAsync(userId);
+            await _pulseResponseRepository
+                .CountByUserAsync(userId);
 
         var activeQuestions =
-            await _questionRepository.GetActiveOrderedAsync();
+            await _questionRepository
+                .GetActiveOrderedAsync();
 
         if (activeQuestions.Count == 0)
         {
-            return SubmitPulseAnswerResult.InvalidQuestion;
+            throw new AppException("NO_ACTIVE_QUESTIONS");
         }
 
         var expectedQuestionIndex =
@@ -82,12 +96,12 @@ public class PulseService
 
         if (request.QuestionId != expectedQuestion.Id)
         {
-            return SubmitPulseAnswerResult.InvalidQuestion;
+            throw new AppException("INVALID_QUESTION");
         }
 
         if (request.Rating < 1 || request.Rating > 5)
         {
-            return SubmitPulseAnswerResult.InvalidRating;
+            throw new AppException("INVALID_RATING");
         }
 
         var response = new PulseResponse
@@ -95,12 +109,10 @@ public class PulseService
             UserId = userId,
             QuestionId = request.QuestionId,
             Rating = request.Rating,
-            AnsweredDate = date,
+            AnsweredDate = today,
             CreatedDate = DateTime.UtcNow
         };
 
         await _pulseResponseRepository.AddAsync(response);
-
-        return SubmitPulseAnswerResult.Success;
     }
 }
