@@ -11,9 +11,7 @@ using TeamPulse.Api.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
-builder.Services.AddControllers();
+builder.Services.AddTeamPulseErrorHandling();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 var jwtIssuer = builder.Configuration["Jwt:Issuer"]

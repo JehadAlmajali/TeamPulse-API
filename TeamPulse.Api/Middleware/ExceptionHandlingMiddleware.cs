@@ -1,7 +1,31 @@
-﻿using TeamPulse.Api.Responses;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using TeamPulse.Api.Responses;
 using TeamPulse.Application.Exceptions;
 
 namespace TeamPulse.Api.Middleware;
+
+public static class ErrorHandlingServiceCollectionExtensions
+{
+    public static IServiceCollection AddTeamPulseErrorHandling(
+        this IServiceCollection services)
+    {
+        services.AddControllers()
+            .ConfigureApiBehaviorOptions(options =>
+            {
+                options.InvalidModelStateResponseFactory =
+                    context =>
+                        new BadRequestObjectResult(
+                            new ApiErrorResponse
+                            {
+                                Status = 400,
+                                Message = "Invalid request."
+                            });
+            });
+
+        return services;
+    }
+}
 
 public class ExceptionHandlingMiddleware
 {

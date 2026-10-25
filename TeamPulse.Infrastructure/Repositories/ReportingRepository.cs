@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using TeamPulse.Application.DTOs;
 using TeamPulse.Application.Interfaces;
 using TeamPulse.Infrastructure.Persistence;
-using TeamPulse.Application.DTOs;
 
 namespace TeamPulse.Infrastructure.Repositories;
 
@@ -65,52 +65,45 @@ public class ReportingRepository : IReportingRepository
     }
 
     public async Task<List<CategoryReportDto>> GetCategoryReportAsync(
-    DateOnly? from,
-    DateOnly? to)
+        DateOnly? from,
+        DateOnly? to)
     {
         var query =
             _context.PulseResponses
-                .AsNoTracking()
-                .Join(
-                    _context.Questions.AsNoTracking(),
-                    response => response.QuestionId,
-                    question => question.Id,
-                    (response, question) => new
-                    {
-                        Response = response,
-                        Question = question
-                    });
+                .AsNoTracking();
 
         if (from.HasValue)
         {
             query = query.Where(
-                x => x.Response.AnsweredDate >= from.Value);
+                r => r.AnsweredDate >= from.Value);
         }
 
         if (to.HasValue)
         {
             query = query.Where(
-                x => x.Response.AnsweredDate <= to.Value);
+                r => r.AnsweredDate <= to.Value);
         }
 
         return await query
-            .GroupBy(x => x.Question.Category)
+            .GroupBy(r => r.Question.Category)
             .Select(group => new CategoryReportDto
             {
                 Category = group.Key,
                 ResponseCount = group.Count(),
                 AverageRating =
-                    group.Average(x => x.Response.Rating)
+                    group.Average(r => r.Rating)
             })
             .OrderBy(x => x.Category)
             .ToListAsync();
     }
+
     public async Task<List<TrendReportDto>> GetTrendReportAsync(
-    DateOnly? from,
-    DateOnly? to)
+        DateOnly? from,
+        DateOnly? to)
     {
-        var query = _context.PulseResponses
-            .AsNoTracking();
+        var query =
+            _context.PulseResponses
+                .AsNoTracking();
 
         if (from.HasValue)
         {
@@ -130,46 +123,38 @@ public class ReportingRepository : IReportingRepository
             {
                 Date = group.Key,
                 ResponseCount = group.Count(),
-                AverageRating = group.Average(r => r.Rating)
+                AverageRating =
+                    group.Average(r => r.Rating)
             })
             .OrderBy(x => x.Date)
             .ToListAsync();
     }
 
     public async Task<List<QuestionReportDto>> GetQuestionReportAsync(
-    DateOnly? from,
-    DateOnly? to)
+        DateOnly? from,
+        DateOnly? to)
     {
         var query =
             _context.PulseResponses
-                .AsNoTracking()
-                .Join(
-                    _context.Questions.AsNoTracking(),
-                    response => response.QuestionId,
-                    question => question.Id,
-                    (response, question) => new
-                    {
-                        Response = response,
-                        Question = question
-                    });
+                .AsNoTracking();
 
         if (from.HasValue)
         {
             query = query.Where(
-                x => x.Response.AnsweredDate >= from.Value);
+                r => r.AnsweredDate >= from.Value);
         }
 
         if (to.HasValue)
         {
             query = query.Where(
-                x => x.Response.AnsweredDate <= to.Value);
+                r => r.AnsweredDate <= to.Value);
         }
 
         return await query
-            .GroupBy(x => new
+            .GroupBy(r => new
             {
-                x.Question.Id,
-                x.Question.QuestionText
+                r.Question.Id,
+                r.Question.QuestionText
             })
             .Select(group => new QuestionReportDto
             {
@@ -177,7 +162,7 @@ public class ReportingRepository : IReportingRepository
                 Question = group.Key.QuestionText,
                 ResponseCount = group.Count(),
                 AverageRating =
-                    group.Average(x => x.Response.Rating)
+                    group.Average(r => r.Rating)
             })
             .OrderBy(x => x.QuestionId)
             .ToListAsync();

@@ -14,5 +14,5 @@ public class PulseResponse
 
     public DateTime CreatedDate { get; set; }
 
-    public Question Question { get; set; } = null!;
+    public virtual Question Question { get; set; } = null!;
 }

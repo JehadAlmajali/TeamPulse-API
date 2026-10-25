@@ -1,19 +1,20 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text;
 using System.Text.Json;
 using TeamPulse.Application.DTOs;
 using TeamPulse.Domain.Entities;
 using TeamPulse.Infrastructure.Persistence;
-using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace TeamPulse.Tests.Integration;
 
-public class ReportsApiTests : IClassFixture<TeamPulseWebApplicationFactory>
+public class ReportsApiTests :
+    IClassFixture<TeamPulseWebApplicationFactory>
 {
     private readonly HttpClient _client;
     private readonly TeamPulseWebApplicationFactory _factory;
@@ -34,6 +35,17 @@ public class ReportsApiTests : IClassFixture<TeamPulseWebApplicationFactory>
         Assert.Equal(
             HttpStatusCode.Unauthorized,
             response.StatusCode);
+
+        var body =
+            await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        Assert.Equal(
+            401,
+            body.GetProperty("status").GetInt32());
+
+        Assert.Equal(
+            "Authentication required.",
+            body.GetProperty("message").GetString());
     }
 
     [Fact]
@@ -41,6 +53,8 @@ public class ReportsApiTests : IClassFixture<TeamPulseWebApplicationFactory>
     {
         var tokenResponse =
             await _client.GetAsync("/api/dev/token");
+
+        tokenResponse.EnsureSuccessStatusCode();
 
         var tokenJson =
             await tokenResponse.Content.ReadFromJsonAsync<JsonElement>();
@@ -66,10 +80,12 @@ public class ReportsApiTests : IClassFixture<TeamPulseWebApplicationFactory>
     [InlineData("/api/reports/trend")]
     [InlineData("/api/reports/questions")]
     public async Task ReportEndpoint_WithAdminToken_ReturnsOk(
-    string endpoint)
+        string endpoint)
     {
         var tokenResponse =
             await _client.GetAsync("/api/dev/token");
+
+        tokenResponse.EnsureSuccessStatusCode();
 
         var tokenJson =
             await tokenResponse.Content.ReadFromJsonAsync<JsonElement>();
@@ -93,12 +109,14 @@ public class ReportsApiTests : IClassFixture<TeamPulseWebApplicationFactory>
     [Fact]
     public async Task GetSummary_WithKnownResponses_ReturnsCorrectValues()
     {
-        var testDate = new DateOnly(2026, 1, 15);
+        var testDate =
+            new DateOnly(2026, 1, 15);
 
         using (var scope = _factory.Services.CreateScope())
         {
             var dbContext =
-                scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                scope.ServiceProvider
+                    .GetRequiredService<AppDbContext>();
 
             dbContext.PulseResponses.AddRange(
                 new PulseResponse
@@ -124,6 +142,8 @@ public class ReportsApiTests : IClassFixture<TeamPulseWebApplicationFactory>
         var tokenResponse =
             await _client.GetAsync("/api/dev/token");
 
+        tokenResponse.EnsureSuccessStatusCode();
+
         var tokenJson =
             await tokenResponse.Content.ReadFromJsonAsync<JsonElement>();
 
@@ -144,29 +164,42 @@ public class ReportsApiTests : IClassFixture<TeamPulseWebApplicationFactory>
             response.StatusCode);
 
         var report =
-            await response.Content.ReadFromJsonAsync<ReportSummaryDto>();
+            await response.Content
+                .ReadFromJsonAsync<ReportSummaryDto>();
 
         Assert.NotNull(report);
-        Assert.Equal(2, report.TotalResponses);
-        Assert.Equal(3, report.AverageRating);
+
+        Assert.Equal(
+            2,
+            report.TotalResponses);
+
+        Assert.Equal(
+            3,
+            report.AverageRating);
     }
 
     [Fact]
     public async Task GetSummary_WithEmployeeToken_ReturnsForbidden()
     {
         var configuration =
-            _factory.Services.GetRequiredService<IConfiguration>();
+            _factory.Services
+                .GetRequiredService<IConfiguration>();
 
-        var issuer = configuration["Jwt:Issuer"]!;
-        var audience = configuration["Jwt:Audience"]!;
-        var key = configuration["Jwt:Key"]!;
+        var issuer =
+            configuration["Jwt:Issuer"]!;
+
+        var audience =
+            configuration["Jwt:Audience"]!;
+
+        var key =
+            configuration["Jwt:Key"]!;
 
         var claims = new[]
         {
-        new Claim("userId", "10"),
-        new Claim("name", "Test Employee"),
-        new Claim("role", "Employee")
-    };
+            new Claim("userId", "10"),
+            new Claim("name", "Test Employee"),
+            new Claim("role", "Employee")
+        };
 
         var securityKey =
             new SymmetricSecurityKey(
@@ -177,15 +210,17 @@ public class ReportsApiTests : IClassFixture<TeamPulseWebApplicationFactory>
                 securityKey,
                 SecurityAlgorithms.HmacSha256);
 
-        var token = new JwtSecurityToken(
-            issuer: issuer,
-            audience: audience,
-            claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(30),
-            signingCredentials: credentials);
+        var token =
+            new JwtSecurityToken(
+                issuer: issuer,
+                audience: audience,
+                claims: claims,
+                expires: DateTime.UtcNow.AddMinutes(30),
+                signingCredentials: credentials);
 
         var tokenString =
-            new JwtSecurityTokenHandler().WriteToken(token);
+            new JwtSecurityTokenHandler()
+                .WriteToken(token);
 
         _client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue(
@@ -198,5 +233,16 @@ public class ReportsApiTests : IClassFixture<TeamPulseWebApplicationFactory>
         Assert.Equal(
             HttpStatusCode.Forbidden,
             response.StatusCode);
+
+        var body =
+            await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        Assert.Equal(
+            403,
+            body.GetProperty("status").GetInt32());
+
+        Assert.Equal(
+            "Access forbidden.",
+            body.GetProperty("message").GetString());
     }
 }
